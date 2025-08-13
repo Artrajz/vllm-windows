@@ -36,7 +36,7 @@ jobs:
       - name: Setup CUDA
         uses: Jimver/cuda-toolkit@v0.2.26
         with:
-          cuda: $env:CUDA_VER
+          cuda: ${{ env.CUDA_VER }}
           method: 'network'
 
       - name: Init MSVC Environment and Build
