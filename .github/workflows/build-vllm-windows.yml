@@ -38,7 +38,7 @@ jobs:
         shell: pwsh
         run: |
           Invoke-WebRequest -Uri $env:CUDA_URL -OutFile C:\cuda_installer.exe
-          & "C:\cuda_installer.exe" -s --toolkit --override
+          & "C:\cuda_installer.exe" --toolkit --override
           $env:CUDA_PATH = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v$($env:CUDA_VER.Substring(0,4))"
           $env:PATH = "$env:CUDA_PATH\bin;$env:CUDA_PATH\libnvvp;$env:PATH"
           nvcc --version
