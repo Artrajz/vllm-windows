@@ -33,21 +33,21 @@ jobs:
           echo "CUDA_VER=$($parts[0])" >> $env:GITHUB_ENV
           echo "CUDA_TAG=$($parts[1])" >> $env:GITHUB_ENV
           echo "CUDA_URL=$($parts[2])" >> $env:GITHUB_ENV
-          Write-Host "Parsed CUDA matrix:"
-          Write-Host "CUDA_VER=$($parts[0])"
-          Write-Host "CUDA_TAG=$($parts[1])"
-          Write-Host "CUDA_URL=$($parts[2])"
 
       - name: Download and Install CUDA
         shell: pwsh
         run: |
           Invoke-WebRequest -Uri $env:CUDA_URL -OutFile C:\cuda_installer.exe
-          & C:\cuda_installer.exe -s ("nvcc_" + $env:CUDA_VER.Substring(0,4)) ("cudart_" + $env:CUDA_VER.Substring(0,4))
+          & "C:\cuda_installer.exe" -s --toolkit --override
+          $env:CUDA_PATH = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v$($env:CUDA_VER.Substring(0,4))"
+          $env:PATH = "$env:CUDA_PATH\bin;$env:CUDA_PATH\libnvvp;$env:PATH"
+          nvcc --version
 
       - name: Init MSVC Environment and Build
         shell: pwsh
         run: |
-          & "C:\Program Files (x86)\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+          $vsPath = & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          & "$vsPath\VC\Auxiliary\Build\vcvarsall.bat" x64
           $env:DISTUTILS_USE_SDK = "1"
           $env:VLLM_TARGET_DEVICE = "cuda"
           $env:MAX_JOBS = "4"
