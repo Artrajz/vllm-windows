@@ -27,11 +27,12 @@ jobs:
           python-version: ${{ matrix.python }}
 
       - name: Parse CUDA matrix
-        id: parse_cuda
+        shell: powershell
         run: |
-          echo "CUDA_VER=$(echo ${{ matrix.cuda }} | cut -d'|' -f1)" >> $GITHUB_ENV
-          echo "CUDA_TAG=$(echo ${{ matrix.cuda }} | cut -d'|' -f2)" >> $GITHUB_ENV
-          echo "CUDA_URL=$(echo ${{ matrix.cuda }} | cut -d'|' -f3)" >> $GITHUB_ENV
+          $parts = "${{ matrix.cuda }}" -split '\|'
+          echo "CUDA_VER=$($parts[0])" >> $env:GITHUB_ENV
+          echo "CUDA_TAG=$($parts[1])" >> $env:GITHUB_ENV
+          echo "CUDA_URL=$($parts[2])" >> $env:GITHUB_ENV
 
       - name: Download and Install CUDA
         run: |
