@@ -1,9 +1,9 @@
 name: Build vLLM Windows Wheel
 
 on:
-  push:
-    tags:
-      - "v*"
+  release:
+    types:
+      - published
 
 jobs:
   build-wheel:
@@ -34,10 +34,10 @@ jobs:
           echo "CUDA_TAG=$($parts[1])" >> $env:GITHUB_ENV
 
       - name: Setup CUDA
-        uses: Jimver/cuda-toolkit@v0.2.26
+        uses: Jimver/cuda-toolkit@v0.2.24
         with:
           cuda: ${{ env.CUDA_VER }}
-          method: 'network'
+          method: 'local'
 
       - name: Init MSVC Environment and Build
         shell: pwsh
