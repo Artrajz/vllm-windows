@@ -27,42 +27,38 @@ jobs:
           python-version: ${{ matrix.python }}
 
       - name: Parse CUDA matrix
-        shell: cmd
+        shell: pwsh
         run: |
-          for /f "tokens=1-3 delims=|" %%a in ("%CUDA%") do (
-              set CUDA_VER=%%a
-              set CUDA_TAG=%%b
-              set CUDA_URL=%%c
-          )
-          echo CUDA_VER=%CUDA_VER%>>%GITHUB_ENV%
-          echo CUDA_TAG=%CUDA_TAG%>>%GITHUB_ENV%
-          echo CUDA_URL=%CUDA_URL%>>%GITHUB_ENV%
+          $parts = $env:CUDA -split '\|'
+          $env:CUDA_VER = $parts[0]
+          $env:CUDA_TAG = $parts[1]
+          $env:CUDA_URL = $parts[2]
 
       - name: Download and Install CUDA
-        shell: cmd
+        shell: pwsh
         run: |
-          curl -L -o C:\cuda_installer.exe %CUDA_URL%
-          start /wait C:\cuda_installer.exe -s nvcc_%CUDA_VER:~0,4% cudart_%CUDA_VER:~0,4%
+          Invoke-WebRequest -Uri $env:CUDA_URL -OutFile C:\cuda_installer.exe
+          & C:\cuda_installer.exe -s ("nvcc_" + $env:CUDA_VER.Substring(0,4)) ("cudart_" + $env:CUDA_VER.Substring(0,4))
 
       - name: Init MSVC Environment and Build
-        shell: cmd
+        shell: pwsh
         run: |
-          "C:\Program Files (x86)\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
-          set DISTUTILS_USE_SDK=1
-          set VLLM_TARGET_DEVICE=cuda
-          set MAX_JOBS=4
+          & "C:\Program Files (x86)\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+          $env:DISTUTILS_USE_SDK = "1"
+          $env:VLLM_TARGET_DEVICE = "cuda"
+          $env:MAX_JOBS = "4"
           python -m pip install --upgrade pip
-          pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/%CUDA_TAG%
+          pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$env:CUDA_TAG
           pip install -r requirements/build.txt
           pip install -r requirements/windows.txt
           pip wheel . --no-build-isolation -w dist
-          mkdir dist_%CUDA_TAG%_py%PYTHON_VERSION%
-          move dist\*.whl dist_%CUDA_TAG%_py%PYTHON_VERSION%
+          $distDir = "dist_$($env:CUDA_TAG)_py$($env:PYTHON_VERSION)"
+          New-Item -ItemType Directory -Path $distDir -Force
+          Move-Item -Path "dist\*.whl" -Destination $distDir
 
       - name: Upload wheel to release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist_%CUDA_TAG%_py%PYTHON_VERSION%/*.whl
+          files: dist_$env:CUDA_TAG_py$env:PYTHON_VERSION/*.whl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
