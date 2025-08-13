@@ -1,0 +1,61 @@
+name: Build vLLM Windows Wheel
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-wheel:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: [3.10, 3.12]
+        cuda: [
+          "12.4.1|cu124|https://developer.download.nvidia.com/compute/cuda/12.4.1/network_installers/cuda_12.4.1_windows_network.exe",
+          "12.6.3|cu126|https://developer.download.nvidia.com/compute/cuda/12.6.3/network_installers/cuda_12.6.3_windows_network.exe"
+        ]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Parse CUDA matrix
+        id: parse_cuda
+        run: |
+          echo "CUDA_VER=$(echo ${{ matrix.cuda }} | cut -d'|' -f1)" >> $GITHUB_ENV
+          echo "CUDA_TAG=$(echo ${{ matrix.cuda }} | cut -d'|' -f2)" >> $GITHUB_ENV
+          echo "CUDA_URL=$(echo ${{ matrix.cuda }} | cut -d'|' -f3)" >> $GITHUB_ENV
+
+      - name: Download and Install CUDA
+        run: |
+          curl -L -o C:\cuda_installer.exe %CUDA_URL%
+          start /wait C:\cuda_installer.exe -s nvcc_%CUDA_VER:0:4% cudart_%CUDA_VER:0:4%
+
+      - name: Init MSVC Environment and Build
+        shell: cmd
+        run: |
+          "C:\Program Files (x86)\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+          set DISTUTILS_USE_SDK=1
+          set VLLM_TARGET_DEVICE=cuda
+          set MAX_JOBS=4
+          python -m pip install --upgrade pip
+          pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/%CUDA_TAG%
+          pip install -r requirements/build.txt
+          pip install -r requirements/windows.txt
+          pip wheel . --no-build-isolation -w dist
+          mkdir dist_%CUDA_TAG%_py%PYTHON_VERSION%
+          move dist\*.whl dist_%CUDA_TAG%_py%PYTHON_VERSION%
+
+      - name: Upload wheel to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist_%CUDA_TAG%_py%PYTHON_VERSION%/*.whl
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
