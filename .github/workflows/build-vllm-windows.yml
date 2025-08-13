@@ -33,6 +33,10 @@ jobs:
           $env:CUDA_VER = $parts[0]
           $env:CUDA_TAG = $parts[1]
           $env:CUDA_URL = $parts[2]
+             
+          "CUDA_VER=$($env:CUDA_VER)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "CUDA_TAG=$($env:CUDA_TAG)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "CUDA_URL=$($env:CUDA_URL)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Download and Install CUDA
         shell: pwsh
