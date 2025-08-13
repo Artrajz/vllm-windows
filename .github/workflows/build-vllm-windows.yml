@@ -13,8 +13,8 @@ jobs:
       matrix:
         python: ["3.10", "3.12"]
         cuda: [
-          "12.4.1|cu124|https://developer.download.nvidia.com/compute/cuda/12.4.1/local_installers/cuda_12.4.1_551.78_windows.exe",
-          "12.6.3|cu126|https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/cuda_12.6.3_561.17_windows.exe"
+          "12.4.1|cu124",
+          "12.6.3|cu126"
         ]
 
     steps:
@@ -32,18 +32,12 @@ jobs:
           $parts = "${{ matrix.cuda }}" -split '\|'
           echo "CUDA_VER=$($parts[0])" >> $env:GITHUB_ENV
           echo "CUDA_TAG=$($parts[1])" >> $env:GITHUB_ENV
-          echo "CUDA_URL=$($parts[2])" >> $env:GITHUB_ENV
 
-      - name: Download and Install CUDA
-        shell: pwsh
-        run: |
-          Invoke-WebRequest -Uri $env:CUDA_URL -OutFile C:\cuda_installer.exe
-          Test-Path "C:\cuda_installer.exe"
-          & "C:\cuda_installer.exe" --silent --toolkit --override
-          Get-ChildItem "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA" -Directory | ForEach-Object { $_.Name }
-          echo "CUDA_PATH=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v$($env:CUDA_VER.Substring(0,4))" >> $env:GITHUB_ENV
-          echo "PATH=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v$($env:CUDA_VER.Substring(0,4))\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v$($env:CUDA_VER.Substring(0,4))\libnvvp;$env:PATH" >> $env:GITHUB_ENV
-          nvcc --version
+      - name: Setup CUDA
+        uses: Jimver/cuda-toolkit@v0.2.26
+        with:
+          cuda: $env:CUDA_VER
+          method: 'network'
 
       - name: Init MSVC Environment and Build
         shell: pwsh
