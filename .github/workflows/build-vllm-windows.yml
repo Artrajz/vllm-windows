@@ -16,12 +16,14 @@ jobs:
           "12.4.1|cu124",
           "12.6.3|cu126"
         ]
+        torch: ["2.7.1"]
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          fetch-tags: true
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -37,22 +39,29 @@ jobs:
 
       - name: Setup CUDA
         uses: Jimver/cuda-toolkit@v0.2.24
+        id: cuda-toolkit
         with:
           cuda: ${{ env.CUDA_VER }}
           method: 'local'
 
-      - name: Init MSVC Environment and Build
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Setup environment
         shell: pwsh
         run: |
-          $vsPath = & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-          & "$vsPath\VC\Auxiliary\Build\vcvarsall.bat" x64
+          nvcc -V
           $env:DISTUTILS_USE_SDK = "1"
           $env:VLLM_TARGET_DEVICE = "cuda"
           $env:MAX_JOBS = "4"
           python -m pip install --upgrade pip
-          pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$env:CUDA_TAG
+          pip install torch==${{ matrix.torch }}+${{ env.CUDA_TAG }} torchvision torchaudio --index-url https://download.pytorch.org/whl/$env:CUDA_TAG
           pip install -r requirements/build.txt
           pip install -r requirements/windows.txt
+
+      - name: Build wheel
+        shell: pwsh
+        run: |
           pip wheel . --no-build-isolation -w dist
           $distDir = "dist_$($env:CUDA_TAG)_py$($env:PYTHON_VERSION)"
           New-Item -ItemType Directory -Path $distDir -Force
